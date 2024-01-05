@@ -1,0 +1,203 @@
+/*
+ Shrey Varma
+ UID: 118019727
+ Directory: shreyv
+*/
+
+#include <stdio.h>
+#include <math.h>
+
+#define MAX_ASSIGNMENTS 50
+
+/* This method drops assignments that have the lowest value which is */
+/* calculated by the assignment score weight depending on the amount of */
+/* assignments the user wants to drop */
+void drop_assignments(int arr[], int na, int nd) {
+    int x, min_value, value, counter = 0, pos = 0;
+
+    /* makes sure to drop the number of assignments corresponding to nd */
+    while (counter < nd) {
+        min_value = arr[1] * arr[2];
+
+        /* Cycles through array */
+        for (x = 0; x < (na * 4); x += 4) {
+            /* Value for each assignment */
+            value = arr[x + 1] * arr[x + 2]; 
+
+            /* If value is greater than 0 and less than or equal to the min  */
+            if (value != 0 && (value < min_value || (value == min_value && 
+                (x < pos)))) {
+            
+                min_value = value;
+                pos = x;
+            }
+        }
+        /* makes the weight of the array with the minimum value equal to 0 */
+        arr[pos + 2] = 0;
+        counter++;
+    }
+}
+
+/* This method calculates the numeric score by first dropping the specified */
+/* assignments with lowest  scores, and then calculating the values */
+/* (score*weight) for the remaining assignments. returns the score as a */
+double numeric_score(int arr[], int na, int nd, int late_penalty) { 
+    int x, late_deduction;
+    double num_score = 0, sum_weight = 0;
+
+    /* Drops assignments after computing sum_weight */
+    if (nd > 0) {
+        drop_assignments(arr, na, nd);
+    }
+
+    /* Gets the sum of the weight for each assignment */
+    for (x = 0; x < (na * 4); x += 4) {
+        sum_weight += arr[x + 2];
+    }
+    /* Cycles through entire array with increments of 4 */
+    for (x = 0; x < (na * 4); x += 4) {
+        /* late deduction = score - (days late * late penalty) */
+        late_deduction = arr[x + 1] - (arr[x + 3] * late_penalty);
+
+        /* Updated score * weight (as a percentage) */
+        if (late_deduction > 0 && (arr[x + 3] * late_penalty) <= arr[x + 1]) {
+            num_score += late_deduction * (arr[x + 2] / sum_weight);
+        }
+    }
+    return num_score;
+}
+
+/* This method calculates mean of all of the assignment scores, including */
+/* the late penalty, without dropping any assignments */
+double calc_mean(int arr[], int na, int late_penalty) {
+    int x;
+    double mean, sum_scores = 0;
+
+    /* Cycles through array and adds up scores including the late penalty */
+    for (x = 0; x < (na * 4); x += 4) {
+    
+        /* If score is < than 0 after late penalty applied then changes to 0 */
+        if ((arr[x + 1] - (arr[x + 3] * late_penalty)) <= 0) {
+            sum_scores += 0;
+        } else {
+            sum_scores += (arr[x + 1] - (arr[x + 3] * late_penalty));
+        }
+    }
+    
+    /* divides the sum by the number of assignments */
+    mean = (sum_scores / na);
+    return mean;
+}
+
+/* This method calculates the standard deviation of all of the assignment */
+/* scores, including the late penalty, without dropping any assignments */
+double calc_std_dv(int arr[], int na, int late_penalty)
+{
+    int x, real_score;
+    double variance, std_dv, mean, sum_scores = 0;
+
+    mean = calc_mean(arr, na, late_penalty);
+    /* If score gets less than 0, then changes to 0 */
+    for (x = 0; x < (na * 4); x += 4) {
+        if ((arr[x + 1] - (arr[x + 3] * late_penalty)) <= 0) {
+            real_score = 0;
+            sum_scores += pow((real_score - mean), 2);
+        } else {
+            /* score - days late * late penalty */
+            real_score = arr[x + 1] - (arr[x + 3] * late_penalty); 
+            sum_scores += pow((real_score - mean), 2);
+        }
+    }
+    
+    variance = sum_scores / (float)na;
+    std_dv = sqrt(variance);
+
+    return std_dv;
+}
+
+/* This method is the main text for the program and includes all of the non */
+/* user inputted text (no scanf) */
+void return_text(int arr[], int late_penalty, int na, int nd, char gen_stats) {
+    int x, counter = 1, arr_copy[200] = {0};
+    double mean = 0, std_dv = 0, num_score;
+    
+    /* Duplicates values to copy array so that when passed to numeric_score()*/
+    /* the original array is not modified when dropping assignments */
+    for (x = 0; x < (na * 4); x++) {
+        arr_copy[x] = arr[x];
+    }
+
+    /* calculates numeric score if number of assignments dropped is */
+    /*more than 0 and less than total number of assignments */
+    if (nd >= 0 && nd < na) {
+        num_score = numeric_score(arr_copy, na, nd, late_penalty);
+    } else {
+        num_score = 0;
+    }
+
+    /* All of the parameters that go above the assignment data */
+    printf("Numeric Score: %5.4f\n", num_score);
+    printf("Points Penalty Per Day Late: %d\n", late_penalty);
+    printf("Number of Assignments Dropped: %d\n", nd);
+    printf("Values Provided:\n");
+    printf("Assignment, Score, Weight, Days Late\n");
+
+    /* Prints all of the assignment data 1 line per assignment */
+    while (counter <= na) {
+        for (x = 0; x < (na * 4); x += 4) {
+            /* Starting from assignment 1, going up */
+            if (arr[x] == counter) {
+                printf("%d, %d, %d, %d\n", arr[x], arr[x + 1], arr[x + 2], 
+                    arr[x + 3]);
+            }
+        }
+        counter = counter + 1;
+    }
+
+    /* Determines whether to show statistics or not */
+    if (gen_stats == 'Y' || gen_stats == 'y') {
+        std_dv = calc_std_dv(arr, na, late_penalty);
+        mean = calc_mean(arr, na, late_penalty);
+        printf("Mean: %5.4f, Standard Deviation: %5.4f\n", mean, std_dv);
+    }
+}
+
+/* This is the main method for the program. It includes all of the scanf() */
+/* features for inputing the assignment data as well as the other parameters */
+int main(void) {
+    int late_penalty, nd, na, arr[200] = {0}, x = 0;
+    char gen_stats;
+    double sum_weight;
+
+    /* Points_Penalty_Per_Day_Late Number_Of_Assignments_to_Drop Stats_Y/N */
+    /* Number_of_Assignments */
+    scanf("%d %d %c\n", &late_penalty, &nd, &gen_stats);
+    scanf("%d", &na);
+
+    /* Actual assignment data seperated by commas */
+    while (x < (na * 4)) {
+        scanf("%d,%d,%d,%d", &arr[x], &arr[x + 1], &arr[x + 2], &arr[x + 3]);
+        x = x + 4;
+    }
+
+    /* Gets the sum of the weight for each assignment */
+    for (x = 0; x < (na * 4); x += 4) {
+        sum_weight += arr[x + 2];
+    }
+
+    /* If weights (before dropping) do not add up to 100,0, terminates and */
+    /* prints error message */
+    if (sum_weight != 100.0) {
+        printf("ERROR: Invalid values provided\n");
+        return -1;
+    }
+
+    /* Printing the output */
+    if (na >= 0 && late_penalty >= 0 && nd >= 0) {
+        return_text(arr, late_penalty, na, nd, gen_stats);
+    }
+
+    return 0;
+}
+
+
